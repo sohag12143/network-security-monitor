@@ -1,38 +1,54 @@
-import scapy.all as scapy
-import numpy as np
-from sklearn.ensemble import IsolationForest
 
-class PacketMonitor:
-    def __init__(self):
-        self.packets = []
-        self.model = IsolationForest()  # Machine Learning model for anomaly detection
+---
 
-    def capture_packets(self):
-        print('Starting packet capture...')
-        scapy.sniff(prn=self.process_packet, store=False)
+# 📁 2. monitor.py (PASTE THIS)
 
-    def process_packet(self, packet):
-        self.packets.append(packet)
-        print(f'Packet captured: {packet.summary()}')
-        self.analyze_traffic()
+```python
+import socket
+import sys
 
-    def analyze_traffic(self):
-        if len(self.packets) < 100:
-            return
-        traffic_data = np.array([[pkt[scapy.IP].src, pkt[scapy.IP].dst] for pkt in self.packets[-100:] if scapy.IP in pkt]).astype(str)
-        anomalies = self.detect_anomalies(traffic_data)
-        if anomalies.size > 0:
-            self.alert_threat(anomalies)
+def check_host(target):
+    print(f"\n[+] Checking target: {target}")
 
-    def detect_anomalies(self, traffic_data):
-        self.model.fit(np.arange(0, len(traffic_data)).reshape(-1, 1))
-        predictions = self.model.predict(np.arange(0, len(traffic_data)).reshape(-1, 1))
-        return traffic_data[predictions == -1]  # Getting anomalies
+    try:
+        host = socket.gethostbyname(target)
+        print("[✓] Host is reachable")
+        return host
+    except:
+        print("[!] Host not reachable")
+        return None
 
-    def alert_threat(self, anomalies):
-        print('Threat detected! Anomalies found:')
-        print(anomalies)
 
-if __name__ == '__main__':
-    monitor = PacketMonitor()
-    monitor.capture_packets()
+def scan_ports(target):
+    print("\n[+] Scanning ports...")
+
+    ports = [21, 22, 23, 80, 443, 3306]
+
+    for port in ports:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(1)
+
+        result = s.connect_ex((target, port))
+
+        if result == 0:
+            print(f"[!] Open port detected: {port}")
+
+        s.close()
+
+    print("[✓] Scan completed")
+
+
+if __name__ == "__main__":
+
+    if len(sys.argv) != 2:
+        print("Usage: python monitor.py <target>")
+        sys.exit()
+
+    target = sys.argv[1]
+
+    print("🛡️ Network Security Monitor Started")
+
+    ip = check_host(target)
+
+    if ip:
+        scan_ports(ip)
